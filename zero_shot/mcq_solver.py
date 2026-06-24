@@ -2,13 +2,15 @@ from transformers import pipeline
 
 class Solver:
     
-    def __init__(self,model="facebook/bart-large-mnli"):
+    def __init__(self,model="facebook/bart-large-mnli", device_id=-1):
         self.model = model
+        self.device= device_id
         
     def solve(self, text, labels):
         classifier = pipeline(
             "zero-shot-classification",
-            model = self.model
+            model = self.model,
+            device=self.device
         )
         text = "Pick the best possible answer: What is Martin Heidegger's view on the relationship between time and human existence? among the listed options."
 
