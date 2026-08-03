@@ -1,4 +1,4 @@
-from zero_shot.mcq_solver import ZeroShotSolver
+from approaches.zero_shot import ZeroShotSolver
 from tqdm import tqdm
 import pandas as pd
 import torch

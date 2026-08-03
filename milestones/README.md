@@ -1,1 +1,1 @@
-### This folder contains the code for all milestone gforms
+### This folder contains the code for milestone gforms
