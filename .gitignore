@@ -1,2 +1,4 @@
 venv_mcq
 **/__pycache__/
+models/
+*.safetensors
