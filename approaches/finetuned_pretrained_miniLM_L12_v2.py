@@ -9,13 +9,6 @@ from sklearn.model_selection import train_test_split
 import warnings
 warnings.filterwarnings('ignore')
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-
-print(f"PyTorch Version: {torch.__version__}")
-print(f"GPU Available: {torch.cuda.is_available()}")
-if torch.cuda.is_available():
-    print(f"GPU Name: {torch.cuda.get_device_name(0)}")
-
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 OPTIONS = ['A', 'B', 'C', 'D', 'E']
 MODEL_NAME = 'cross-encoder/ms-marco-MiniLM-L12-v2'
@@ -26,6 +19,9 @@ LR = 2e-5
 OUTPUT_DIR = '/kaggle/working/model'
 
 class MCQPairDataset(Dataset):
+    '''
+    A dataset class to convert the prompt-answer data into embeddings
+    '''
     def __init__(self, df, tokenizer, max_len=MAX_LEN):
         self.pairs = []
         for _, row in df.iterrows():
@@ -82,7 +78,7 @@ def train_one_epoch(model, loader, optimizer, scheduler, loss_fn):
         labels = batch['label'].to(DEVICE)
 
         outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-        logits = outputs.logits.squeeze(-1) 
+        logits = outputs.logits.squeeze(-1) # remove extra dimension frm logit output
         loss = loss_fn(logits, labels)
 
         loss.backward()
