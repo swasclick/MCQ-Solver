@@ -14,7 +14,7 @@ from transformers import (
     AutoModelForSequenceClassification,
     AutoModelForMultipleChoice
 )
-
+from huggingface_hub import hf_hub_download
 try:
     from approaches.best_score import TFIDFRetriever
 except ImportError:
@@ -25,16 +25,17 @@ MODEL_1_NAME = "Model 1: Zero-Shot Classifier (BART)"
 MODEL_1_PATH = r"facebook/bart-large-mnli"
 
 MODEL_2_NAME = "Model 2: Cross-Encoder (MiniLM)"
-MODEL_2_PATH = r"C:\Users\Swastik\Downloads\miniLM"  
-TOKENIZER_2_PATH = r"C:\Users\Swastik\Downloads\miniLM" 
+MODEL_2_PATH = r"Swasclick/mcq-miniLM"  
+TOKENIZER_2_PATH = r"Swasclick/mcq-miniLM" 
 
 MODEL_3_NAME = "Model 3: Custom FastText + Transformer"
-MODEL_3_WEIGHTS_PATH = r"C:\Users\Swastik\Downloads\tiny_mcq_model.pth" 
-TOKENIZER_3_PATH = r"C:\Users\Swastik\Downloads\tokenizer.pkl"
 
 MODEL_4_NAME = "Model 4: RAG + Pretrained Finetuning"
-MODEL_4_DIR = r"D:\Placement Prep\Projects\MCQ Solver\MCQ-Solver\models\best model"
-RETRIEVER_PATH = r"D:\Placement Prep\Projects\MCQ Solver\MCQ-Solver\models\best model\tfidf_retriever.pkl"
+MODEL_4_DIR = r"Swasclick/mcq-rag"
+RETRIEVER_PATH = hf_hub_download(
+    repo_id="Swasclick/mcq-rag",
+    filename="tfidf_retriever.pkl"
+)
 
 
 class CustomFastTextTokenizer:
@@ -120,25 +121,62 @@ def load_model_2(model_path, tokenizer_path):
     return tokenizer, model, device
 
 @st.cache_resource
-def load_model_3(model_weights_path, tokenizer_path):
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    
+def load_model_3():
+
+    device = torch.device(
+        'cuda' if torch.cuda.is_available() else 'cpu'
+    )
+
+    weights_path = hf_hub_download(
+        repo_id="Swasclick/mcq-scratch",
+        filename="tiny_mcq_model.pth"
+    )
+
+    tokenizer_path = hf_hub_download(
+        repo_id="Swasclick/mcq-scratch",
+        filename="tokenizer.pkl"
+    )
+
     with open(tokenizer_path, "rb") as f:
         tokenizer = pickle.load(f)
-        
-    model = TinyMCQModel(vocab_size=tokenizer.vocab_size, d_model=256, nhead=4, num_layers=2).to(device)
-    model.load_state_dict(torch.load(model_weights_path, map_location=device))
+
+    model = TinyMCQModel(
+        vocab_size=tokenizer.vocab_size,
+        d_model=256,
+        nhead=4,
+        num_layers=2
+    ).to(device)
+
+    model.load_state_dict(
+        torch.load(weights_path, map_location=device)
+    )
+
     model.eval()
+
     return tokenizer, model, device
 
 @st.cache_resource
-def load_model_4(model_dir, retriever_path):
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    tokenizer = AutoTokenizer.from_pretrained(model_dir, use_fast=True)
-    model = AutoModelForMultipleChoice.from_pretrained(model_dir).to(device)
+def load_model_4():
+
+    device = torch.device(
+        'cuda' if torch.cuda.is_available() else 'cpu'
+    )
+
+    tokenizer = AutoTokenizer.from_pretrained(
+        MODEL_4_DIR,
+        use_fast=True
+    )
+
+    model = AutoModelForMultipleChoice.from_pretrained(
+        MODEL_4_DIR
+    ).to(device)
+
     model.eval()
+
+    retriever_path = RETRIEVER_PATH
+
     retriever = joblib.load(retriever_path)
-        
+
     return tokenizer, model, retriever, device
 
 
@@ -167,7 +205,7 @@ def predict_model_2(prompt, options):
     return probs
 
 def predict_model_3(prompt, options):
-    tokenizer, model, device = load_model_3(MODEL_3_WEIGHTS_PATH, TOKENIZER_3_PATH)
+    tokenizer, model, device = load_model_3()
     
     input_ids = []
     for opt in ['A', 'B', 'C', 'D', 'E']:
@@ -184,7 +222,7 @@ def predict_model_3(prompt, options):
     return probs
 
 def predict_model_4(prompt, options):
-    tokenizer, model, retriever, device = load_model_4(MODEL_4_DIR, RETRIEVER_PATH)
+    tokenizer, model, retriever, device = load_model_4()
     
     ctx = retriever.retrieve([prompt], top_k=3)[0]
     
